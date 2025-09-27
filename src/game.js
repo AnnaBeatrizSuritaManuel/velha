@@ -9,36 +9,58 @@ const defaulgame = [
 
 const hasSequence = (items) => /ooo|xxx/i.test(items.join(''));
 
+const getWinner = (items) => {
+    const joined = items.join('').toLowerCase();
+    if (joined.includes('ooo')) return 'O';
+    if (joined.includes('xxx')) return 'X';
+    return null;
+};
+
 const checkBasicPattern = (acc, current, index, arr) => {
-    if (acc) return true;
+    if (acc.winner) return acc;
 
-    const checkHorizontal = hasSequence(current);
-    const checkVertical = hasSequence(arr.map(item => item[index]));
+    const winnerHorizontal = getWinner(current);
+    const winnerVertical = getWinner(arr.map(item => item[index]));
 
-    return checkHorizontal || checkVertical;
+    if (winnerHorizontal) return { winner: winnerHorizontal };
+    if (winnerVertical) return { winner: winnerVertical };
+
+    return acc;
 };
 
 const checkDiagonal = (game) => {
-    const normal = hasSequence(game.map((el, index) => game[index][index]));
-    const reverse = hasSequence(game.map((el, index) => game[index][game.length - 1 - index]));
-    return normal || reverse;
+    const winnerNormal = getWinner(game.map((el, index) => game[index][index]));
+    const winnerReverse = getWinner(game.map((el, index) => game[index][game.length - 1 - index]));
+    return winnerNormal || winnerReverse || null;
 };
 
 export default function Game() {
     const [currentPlayer, setCurrentPlayer] = useState('X');
     const [game, setGame] = useState(defaulgame);
+    const [winner, setWinner] = useState(null);
 
-    const isGameOver = game.reduce(checkBasicPattern, false) || checkDiagonal(game);
+    const result = game.reduce(checkBasicPattern, { winner: null });
+    const diagonalWinner = checkDiagonal(game);
+
+    if (!winner && (result.winner || diagonalWinner)) {
+        setWinner(result.winner || diagonalWinner);
+    }
+
+    const isGameOver = Boolean(winner);
 
     return (
         <section id="game">
             <header>
                 <img src={scara} alt="logo" />
-                <h1>Jogo da velha</h1>
+                <h1>Jogo da Velha</h1>
             </header>
+
             {isGameOver && (
-                <p className="gameover">Game Over!!</p>
+                <p className="gameover">
+                    {winner ? `Jogador ${winner} venceu!` : "Empate!"}
+                </p>
             )}
+
             <div className="board">
                 {game.map((row, rowIndex) => (
                     <div className="row" key={rowIndex}>
@@ -48,7 +70,8 @@ export default function Game() {
                                 className="cell"
                                 role="button"
                                 onClick={() => {
-                                    if (cell !== "" || isGameOver) return; 
+                                    if (cell !== "" || isGameOver) return;
+
                                     setGame(game.map((rowItem, rowI) => {
                                         return rowItem.map((cellItem, cellI) => {
                                             if (rowI === rowIndex && cellI === cellIndex) {
@@ -57,6 +80,7 @@ export default function Game() {
                                             return cellItem;
                                         });
                                     }));
+
                                     setCurrentPlayer(currentPlayer === 'X' ? 'O' : 'X');
                                 }}
                             >
@@ -66,10 +90,12 @@ export default function Game() {
                     </div>
                 ))}
             </div>
+
             <div className="actions">
                 <button type="button" onClick={() => {
                     setGame(defaulgame.map(row => [...row]));
                     setCurrentPlayer('X');
+                    setWinner(null);
                 }}>
                     Reiniciar jogo
                 </button>
